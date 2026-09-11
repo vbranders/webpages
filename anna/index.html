@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Planning Journalier</title>
+  <style>
+      h1 {
+  text-align: center;
+  margin: 1rem 0;
+}
+
+#page {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /*height: 100vh;*/
+}
+
+#taskContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  gap: 1rem;
+  padding: 0 1rem 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.taskColumn {
+  flex: 1 1 350px;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: relative;
+  gap: 5px;
+  /*max-height: 100%; */
+  min-width: 200px;
+}
+
+.colitem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  min-height: 0;
+  border: 1px solid #ccc;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+
+.colitem .header {
+  background: #007acc;
+  color: white;
+  margin: 0;
+  padding: 0.75rem;
+  font-size: 1rem;
+
+  display: flex;
+
+  align-items: center; 
+  flex-wrap: wrap; 
+  align-content: space-around;
+
+  gap: 5px;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+}
+
+.colitem .header .filler {
+  flex-grow: 1;
+}
+.colitem .header h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+.colitem .list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.75rem;
+  margin-top: 0;
+  max-height: 80vh;
+}
+
+
+.dragging {
+  opacity: 0.6;
+}
+
+.addItemBtn {
+  background:none; border:none; color: #44ff44; font-weight: 800; cursor:pointer;
+}
+
+.edit-btn, .delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: .3rem;
+}
+
+.edit-btn { color: #0275d8; }
+.edit-btn:hover { color: #025aa5; font-weight:800; }
+.delete-btn { color: #d9534f; }
+.delete-btn:hover { color: #c12e2a; font-weight:800; }
+
+.drag-over {
+  background: #e0f7fa;
+  border: 2px dashed #00acc1;
+}
+
+.taskModal.hidden {
+  display: none;
+}
+.taskModal {
+  background: #fafafa;
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  z-index: 1000;
+  margin: auto;
+  box-shadow: 0 0 15px rgba(0,0,0,0.2);
+  width: 75vw;
+  height: auto;
+}
+#emojiPalette {
+  margin-top: .5rem;
+}
+#emojiPalette .emoji {
+  cursor: pointer;
+  font-size: 1.25rem;
+  padding: .25rem .25rem;
+  display: inline-flex; /* Utiliser flexbox */
+  align-items: center;  /* Centrage vertical */
+  justify-content: center; /* Centrage horizontal */
+  height: 2rem;
+  width: 2rem;
+  border-radius: 5px;
+}
+#emojiPalette .emoji:hover {
+  background-color: #ddd;
+}
+
+#classPalette {
+  margin-top: .5rem;
+}
+#classPalette .emoji {
+  cursor: pointer;
+  font-size: 1.25rem;
+  padding: .25rem .25rem;
+  display: inline-flex; /* Utiliser flexbox */
+  align-items: center;  /* Centrage vertical */
+  justify-content: center; /* Centrage horizontal */
+  height: 2rem;
+  width: 2rem;
+  border-radius: 5px;
+}
+#classPalette .emoji:hover {
+  background-color: #ddd;
+}
+
+.insert-slot {
+  height: 6px;
+  margin: 0px;
+  padding: 0px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  position: relative;
+  box-sizing: border-box;
+  border-radius: 1px;
+}
+
+.insert-slot:hover {
+  background: #d4fcd4;
+  height: 6px;
+  margin: 0 2.5px;
+  border: 1px dashed #265828;
+  text-align: center;
+}
+
+.hover-text {
+  box-sizing: border-box;
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  visibility: hidden;
+  font-size: 2rem;
+  z-index: 200;
+  background: #265828;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  line-height: 1;          /* Pour éviter un décalage vertical */
+  font-family: sans-serif;
+}
+
+.insert-slot:hover .hover-text {
+  visibility: visible;
+  color: #4CAF50;
+  font-weight: 1000;
+}
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5); /* fond sombre semi-transparent */
+  z-index: 999; /* derrière la modale mais au-dessus du reste */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.hidden {
+  display: none;
+}
+.item {
+  display: flex;
+  justify-content: flex-start; 
+  align-items: center; 
+  flex-wrap: nowrap; 
+  align-content: center;
+  gap: 5px;
+}
+.item > button {
+  display: none;
+  background: none;
+  border: none;
+}
+.item:hover > button {
+  display: inline;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: .5rem;
+}
+
+.taskWrapper {
+  display: flex;
+  flex-grow: 1;
+  justify-content: flex-start; 
+  align-items: center; 
+  flex-wrap: nowrap; 
+  align-content: center;
+  gap: 5px;
+  cursor: grab;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.timing {
+  font-size: .75rem;
+  background: #4f4f4fBB; /* rouge */
+  color: white;
+  padding: 0.45rem 0.45rem;
+  border-radius: 3px;
+  margin-right: 0.5rem;
+  white-space: nowrap;
+  border-radius: 6px;
+}
+.taskWrapper {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+}
+.description {
+  flex-grow: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: .5rem;
+  min-width: 0;
+}
+.description:hover {
+  background: #F0F9F0;
+}
+.header .btnT {
+  cursor: pointer;
+  font-size: .75rem;
+  margin: 0 5px;
+}
+.inputtaskModal {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+.text-red {
+  color: red;
+}
+.bold {
+  font-weight: 900;
+}
+
+
+
+#resizer {
+  height: 20px; /* hauteur totale suffisante pour inclure le grip + gap */
+  background: transparent;
+  cursor: grab;
+  position: relative;
+  margin: 0 20px;
+  border-radius: 4px;
+}
+
+#resizer:hover {
+  background-color: #eee;
+}
+
+#resizer::before,
+#resizer::after,
+#resizer span {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 30px;
+  height: 3px;
+  background-color: #888;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  transition: background-color 0.2s ease;
+}
+
+/* Ligne du haut */
+#resizer::before {
+  top: 3px;
+}
+
+/* Ligne du milieu */
+#resizer span {
+  top: 9px; /* 3px + 3px height + 3px gap = 9px */
+}
+
+/* Ligne du bas */
+#resizer::after {
+  top: 15px; /* 9px + 3px height + 3px gap = 15px */
+}
+
+/* Effet hover */
+#resizer:hover::before,
+#resizer:hover::after,
+#resizer:hover span {
+  background-color: #555;
+}
+
+.promptBtn {
+  background-color: #f0f0f0;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+.promptBtn:hover {
+  background-color: #d0d0d0;
+  border: 1px solid #b0b0b0;
+}
+
+
+.modalBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: .3rem;
+  color: #0275d8;
+  border: 2px solid #fafafa !important;
+  box-sizing: border-box;
+}
+.modalBtn:hover {
+  color: #025aa5;
+  border: 2px solid #b0b0b0 !important;
+}
+
+.modalBtn.selected {
+  border: 2px solid #0bc100 !important;
+}
+
+
+.description.Nuit {
+  background: #393977;
+  border: 1px solid #121747;
+  color: white;
+}
+.description.Rouge{
+  background: #d9534fBB; /* rouge */
+  border: 1px solid #d9534f;
+  color: white;
+}
+.description.Vert{
+  background: #53d94fBB; /* rouge */
+  border: 1px solid #53d94f;
+  color: black;
+}
+.description.Bleu{
+  background: #534fd9BB; /* rouge */
+  border: 1px solid #534fd9;
+  color: white;
+}
+  </style>
+</head>
+<body>
+  <div id="page">
+
+    <h1>Planning Journalier</h1>
+
+    <div id="taskContainer" class="d-flex flex-wrap">
+        <div class="taskColumn flex-grow-1">
+            <div class="colitem">
+                <div class="header"></div>
+                <div class="list" id="taskList"></div>
+            </div>
+        </div>
+
+        <div class="taskColumn flex-grow-1">
+            <div class="colitem">
+                <div class="header"></div>
+                <div class="list" id="planningList"></div>
+            </div>
+        </div>
+
+
+        <div class="taskColumn flex-grow-1">
+            <div class="colitem">
+                <div class="header"></div>
+                <div class="list" id="jobList"></div>
+            </div>
+        </div>
+
+
+        <div class="taskColumn flex-grow-1">
+            <div class="colitem">
+                <div class="header"></div>
+                <div class="list" id="tomorrowList"></div>
+            </div>
+        </div>
+
+
+        <div class="taskColumn flex-grow-1">
+            <div class="colitem">
+                <div class="header"></div>
+                <div class="list" id="afterTomorrowList"></div>
+            </div>
+        </div>
+    </div>
+
+<div id="resizer"><span></span></div>
+
+</div>
+
+<div id="customPromptOverlay" class="overlay hidden">
+    <div id="customPrompt" class="taskModal">
+        <div class="taskModal-content">
+            <h3 id="promptTitle">Entrée</h3>
+            <div class="inputtaskModal">
+                <input id="promptInputDescr" type="text" style="width: 100%; padding: .5rem; box-sizing: border-box;" />
+                <input id="promptInputTime" type="text" style="width: 15ch; padding: .5rem; box-sizing: border-box;" />
+            </div>
+            <div id="emojiPalette">
+                <span class="emoji"><span class="text-red bold">&#x21;</span></span>
+                <span class="emoji">&rarr;</span>
+                <span class="emoji">&#10084;&#65039;</span>
+                <span class="emoji">&#9200;</span>
+                <span class="emoji">&#128663;</span>
+                <span class="emoji">&#128692;</span>
+                <span class="emoji">&#128054;</span>
+                <span class="emoji">&#128164;</span>
+                <span class="emoji">&#128222;</span>
+            </div>
+            <div id="classPalette">
+                <button class="description Nuit modalBtn" onclick="this.classList.toggle('selected');">Nuit</button>
+                <button class="description Rouge modalBtn" onclick="this.classList.toggle('selected');">Rouge</button>
+                <button class="description Vert modalBtn" onclick="this.classList.toggle('selected');">Vert</button>
+                <button class="description Bleu modalBtn" onclick="this.classList.toggle('selected');">Bleu</button>
+            </div>
+            <div style="margin-top: .5rem;display: flex;flex-flow: row; gap: 5px; justify-content: flex-end;">
+                <button id="promptCancelBtn" class="promptBtn">Annuler</button>
+                <button id="promptConfirmBtn" class="promptBtn">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    // Liste les zones
+const zones = [
+  {
+    id: "taskList",
+    label: "Tâches habituelles",
+    allowAdd: true,
+    allowImport: true,
+    allowSave: true,
+    allowTrash: true,
+    allowDrop: true,
+    type: "task",
+    empty: "<p style=\"text-align:center; color:#888; font-style:italic;\">Glissez une tâche ici pour indiquer vos habitudes.</p>",
+  },
+  {
+    id: "jobList",
+    label: "Tâches travail",
+    allowAdd: true,
+    allowImport: true,
+    allowSave: true,
+    allowTrash: true,
+    allowDrop: true,
+    type: "job",
+    empty: "<p style=\"text-align:center; color:#888; font-style:italic;\">Glissez une tâche ici pour indiquer votre travail.</p>",
+  },
+  {
+    id: "planningList",
+    label: "Planning du jour",
+    allowAdd: true,
+    allowImport: true,
+    allowSave: true,
+    allowTrash: true,
+    allowDrop: true,
+    type: "planning",
+    empty: "<p style=\"text-align:center; color:#888; font-style:italic;\">Glissez une tâche ici pour construire votre planning.</p>",
+  },
+  {
+    id: "tomorrowList",
+    label: "Planning demain",
+    allowAdd: true,
+    allowImport: true,
+    allowSave: true,
+    allowTrash: true,
+    allowDrop: true,
+    type: "tomorrow",
+    empty: "<p style=\"text-align:center; color:#888; font-style:italic;\">Glissez une tâche ici pour construire votre planning.</p>",
+  },
+  {
+    id: "afterTomorrowList",
+    label: "Planning après-demain",
+    allowAdd: true,
+    allowImport: true,
+    allowSave: true,
+    allowTrash: true,
+    allowDrop: true,
+    type: "afterTomorrow",
+    empty: "<p style=\"text-align:center; color:#888; font-style:italic;\">Glissez une tâche ici pour construire votre planning.</p>",
+  },
+];
+
+let dragged = null;
+
+
+
+
+function fillZone(zone, items){
+  items.forEach(item => {
+    addItemInZone(item, zone, true);
+  });
+}
+
+function saveZone(zone) {
+  const items = [...zone.elem.querySelectorAll(".item")].map(item => {
+    const time = item.querySelector(".timing")?.innerHTML.trim() || "";
+    const description = item.querySelector(".description")?.innerHTML.trim() || "";
+    const classes = [...(item.querySelector(".description")?.classList || [])].filter(c => c !== "description");
+    return { time: time, descr: description, classes: classes };
+  });
+  localStorage.setItem(zone.type, JSON.stringify(items));
+  console.log("Sauvegarde : ", zone.type);
+}
+
+function saveState() {
+  zones.forEach(zone => saveZone(zone));
+}
+
+function loadState() {
+  zones.forEach(zone => {
+    zone.elem.innerHTML = "";
+    const items = JSON.parse(localStorage.getItem(zone.type) || "[]");
+
+    if(items.length > 0){
+      fillZone(zone, items);
+      console.log("Restored " + zone.type + ".");
+    } else {
+      resetZone(zone);
+      console.log("Restored empty " + zone.type + ".");
+    }
+
+  });
+}
+
+function createItem(item){
+      // item : {time, descr};
+
+      // Item
+  const wrap = document.createElement("div");
+  wrap.classList.add("taskWrapper");
+  wrap.draggable = true;
+
+      // Timing
+  const timing = document.createElement("span");
+  timing.classList.add("timing");
+  if (item.time?.trim()) {
+    timing.innerHTML = item.time.trim();
+  } else {
+    timing.classList.add("hidden");
+  }
+
+      // Description
+  const description = document.createElement("span");
+  description.classList.add("description");
+  description.innerHTML = item.descr.trim();
+
+  if ("classes" in item && item.classes.length > 0) {
+    item.classes.forEach(c => {description.classList.add(c)});
+  }
+
+
+  wrap.appendChild(timing);
+  wrap.appendChild(description);
+
+  wrap.onclick = (e) => {
+    e.stopPropagation();
+    const currentValues = {
+      time: wrap.querySelector(".timing")?.innerHTML.trim(),
+      descr: wrap.querySelector(".description")?.innerHTML.trim(),
+      classes: [...(wrap.querySelector(".description")?.classList || [])].filter(c => c !== "description")
+    };
+    showPrompt("Modifier l'élément :", currentValues, function(newValues) {
+      if (!newValues) return;
+      changeItem(newValues, wrap);
+    });
+  };
+
+  return wrap;
+}
+
+function changeItem(newValues, item){
+  const timing = item.querySelector(".timing");
+  if (newValues.time?.trim()) {
+    timing.innerHTML = newValues.time.trim();
+    timing.classList.remove("hidden");
+  } else {
+    timing.innerHTML = "";
+    timing.classList.add("hidden");
+  }
+
+  const description = item.querySelector(".description");
+  description.innerHTML = newValues.descr.trim();
+  description.className = "description";
+  if(newValues.classes) {
+    newValues.classes.forEach(c => {description.classList.add(c);});
+  }
+
+  description.parentNode.parentNode.className = "item " + newValues.classes;
+
+  saveState();
+}
+
+function insertionSlot(zone) {
+  const item = document.createElement("div");
+  item.className = "insert-slot";
+
+  const span = document.createElement("span");
+  span.className = "hover-text";
+  span.textContent = "+";
+
+  item.appendChild(span);
+
+  item.addEventListener("click", () => {
+    const currentZone = zones.find(z => z.elem.contains(item));
+    showPrompt(currentZone.label + " : Entrer une nouvelle tâche à ajouter", {time: "", descr: "", classes: ""}, function(newValues) {
+      if (!newValues) return;
+      const fragment = prepareItemForZone(newValues, currentZone);
+      emptyIfEmpty(currentZone);
+          // Ajoute l'item à la zone
+      item.parentNode.parentNode.insertBefore(fragment, item.parentNode.nextSibling);
+          // Save
+      saveZone(currentZone);
+    });
+  });
+  return item
+}
+
+function prepareItemForZone(values, zone){
+      // values : {time, descr};
+  const fragment = document.createDocumentFragment();
+
+  const itemBlock = document.createElement("div");
+  itemBlock.className = "item-block";
+
+  const item  = document.createElement("div");
+  item.className = "item";
+
+  const iSlot = insertionSlot(zone);
+
+  const wrapper = createItem(values);
+
+      // Bouton Modifier
+  const editBtn = document.createElement("button");
+  editBtn.className = "edit-btn";
+  editBtn.innerHTML = "&#9998;";
+  editBtn.title = "Modifier";
+  editBtn.onclick = (e) => {
+    e.stopPropagation();
+    const currentValues = {
+      time: wrapper.querySelector(".timing")?.innerHTML.trim(),
+      descr: wrapper.querySelector(".description")?.innerHTML.trim(),
+      classes: [...(wrapper.querySelector(".description")?.classList || [])].filter(c => c !== "description")
+    };
+    showPrompt("Modifier l'élément :", currentValues, function(newValues) {
+      if (!newValues) return;
+      changeItem(newValues, wrapper);
+    });
+  };
+
+      // Bouton Supprimer
+  const deleteBtn = document.createElement("button");
+  deleteBtn.className = "delete-btn";
+  deleteBtn.innerHTML = "&#10006;";
+  deleteBtn.title = "Supprimer";
+  deleteBtn.onclick = (e) => {
+    e.stopPropagation();
+    const currentZone = zones.find(z => z.elem.contains(item));
+        // Remove element
+    item.remove();
+    iSlot.remove();
+    saveZone(currentZone);
+        // Check if there are elements in the zone
+    if([...currentZone.elem.querySelectorAll(".item")].length == 0){
+          // Otherwise, clean it
+      resetZone(currentZone);
+    }
+  };
+
+      // Ajoutes les parties à l'item
+  item.append(wrapper, editBtn, deleteBtn);
+
+  itemBlock.appendChild(item);
+      // Ajoute insertion slot
+  itemBlock.appendChild(iSlot);
+
+  fragment.appendChild(itemBlock);
+
+  wrapper.addEventListener("dragstart", (e) => {
+    dragged = {"zone": zone, "elem": itemBlock};
+    e.dataTransfer.setDragImage(new Image(), 0, 0);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("application/json", JSON.stringify({
+      time: item.time || "",
+      descr: item.descr || ""
+    }));
+    item.classList.add("dragging");
+    itemBlock.classList.add("dragging");
+  });
+  wrapper.addEventListener("dragend", () => {
+    item.classList.remove("dragging");
+    itemBlock.classList.remove("dragging");
+    zone.elem.classList.remove("drag-over");
+    dragged = null;
+  });
+
+  return fragment;
+}
+
+function addItemInZone(values, zone, silent=false) {
+  const fragment = prepareItemForZone(values, zone);
+
+  emptyIfEmpty(zone);
+
+      // Ajoute l'item à la zone
+  zone.elem.appendChild(fragment);
+
+      // Save
+  if(!silent){
+    saveZone(zone);
+  }
+
+}
+
+function resetZone(zone){
+  zone.elem.innerHTML = zone.empty;
+}
+
+    // Identify the location where item should be inserted
+function getDragAfterElement(container, y) {
+  const items = [...container.querySelectorAll(".item-block:not(.dragging)")];
+  return items.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    return offset < 0 && offset > closest.offset
+    ? { offset, element: child }
+    : closest;
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+    // Select these elements and prepare them
+zones.forEach(zone => {
+  zone.elem = document.getElementById(zone.id);
+
+  const header = zone.elem.previousElementSibling;
+
+      // Prepare fragment
+  const fragment = document.createDocumentFragment();
+      // Title
+  const title = document.createElement("h2");
+  title.textContent = zone.label;
+  fragment.appendChild(title);
+
+      // Add button
+  if(zone.allowAdd){
+    const addBtn = document.createElement("span");
+    addBtn.classList.add("addItemBtn");
+    addBtn.title = "Ajouter"
+    addBtn.innerHTML = "&#43";
+    fragment.appendChild(addBtn);
+
+    addBtn.addEventListener("click", () => {
+      showPrompt(zone.label + " : Entrer une nouvelle tâche à ajouter", {time: "", descr: "", classes: ""}, function(newValues) {
+        if (!newValues) return;
+        addItemInZone(newValues, zone);
+        saveZone(zone);
+      });
+    });
+
+    zone.elem.addEventListener("click", (e) => {
+      if(e.target.tagName === "P"){
+        addBtn.click();
+      }
+    });
+
+  }
+
+      // Filler
+  const filler = document.createElement("span");
+  filler.classList.add("filler");
+  fragment.appendChild(filler);
+
+
+
+      // Trash button
+  if(zone.allowTrash){
+    const trashBtn = document.createElement("span");
+    trashBtn.classList.add("btnT");
+    trashBtn.title = "Vider"
+    trashBtn.innerHTML = "&#128465;";
+    fragment.appendChild(trashBtn);
+
+    trashBtn.addEventListener("click", () => {
+      resetZone(zone);
+      saveZone(zone);
+    });
+  }
+
+      // Save button
+  if(zone.allowSave){
+    const saveBtn = document.createElement("span");
+    saveBtn.classList.add("btnT");
+    saveBtn.title = "Sauver"
+    saveBtn.innerHTML = "&#128190;";
+    fragment.appendChild(saveBtn);
+
+    saveBtn.addEventListener("click", () => {
+      const items = zone.elem.querySelectorAll(".item");
+      if (!items.length) {
+        alert("Le planning est vide.");
+        return;
+      }
+      const lines = [...items].map(item => {
+        const time = item.querySelector(".timing")?.textContent.trim() || "";
+        const description = item.querySelector(".description")?.textContent.trim() || "";
+        const classesArray = [...(item.querySelector(".description")?.classList || [])].filter(c => c !== "description").join(";");
+        const classesString = classesArray.length > 0 ? ';' + classesArray : '';
+        return time + ";" + description + classesString;
+      });
+      const output = lines.join("\n");
+
+      const blob = new Blob([output], { type: "text/plain;charset=utf-8" });
+
+          // Nom de fichier basé sur la date actuelle
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const yyyy = tomorrow.getFullYear();
+      const mm = String(tomorrow.getMonth() + 1).padStart(2, "0");
+      const dd = String(tomorrow.getDate()).padStart(2, "0");
+      const filename = `${zone.type}-${yyyy}-${mm}-${dd}.txt`;
+
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+
+  }
+
+      // Import button
+  if(zone.allowImport){
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.id = `input-${zone.id}`;
+    input.accept = '.txt';
+    input.classList.add("hidden");
+    fragment.appendChild(input);
+
+    const importBtn = document.createElement("label");
+    importBtn.setAttribute("for", input.id);
+    importBtn.classList.add("btnT");
+    importBtn.title = "Importer"
+    importBtn.innerHTML = "&#128194;";
+    fragment.appendChild(importBtn);
+
+    input.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      // zone.elem.innerHTML = "";
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+
+        const lines = ev.target.result
+            .split(/\r?\n/) // Division en ligne selon l'OS
+            .map(l => l.trim())
+            .filter(Boolean);
+
+        const parsedLines = lines.map(line => {
+            const parts = line.split(';').map(part => part.trim());
+
+            if (parts.length === 1) {
+                return {descr: parts[0]};
+            } else if (parts.length === 2) {
+                return {time: parts[0], descr: parts[1]};
+            } else {
+                const time = parts[0];
+                const descr = parts[1];
+                const classes = parts.slice(2);
+                return {time: time, descr: descr, classes: classes};
+            }
+          });
+        fillZone(zone, parsedLines);
+        saveZone(zone);
+      };
+      reader.readAsText(file);
+      input.value = "";
+    });
+  }
+
+  header.appendChild(fragment);
+
+});
+
+    // Drag & Drop pour **réordonner** dans une zone
+    zones.forEach(zone => {
+      zone.elem.addEventListener("dragover", e => {
+        e.preventDefault();
+        zone.elem.classList.add("drag-over");
+
+        const after = getDragAfterElement(zone.elem, e.clientY);
+        const dragging = document.querySelector(".dragging");
+
+        if (!dragging) return;
+
+        if (after) {
+          zone.elem.insertBefore(dragging, after);
+        } else {
+          emptyIfEmpty(zone);
+          zone.elem.appendChild(dragging);
+        }
+
+        e.dataTransfer.dropEffect = 'move';
+
+      });
+
+      zone.elem.addEventListener("dragleave", () => {
+        zone.elem.classList.remove("drag-over");
+      });
+
+      zone.elem.addEventListener("drop", (e) => {
+        e.preventDefault();
+
+        zone.elem.classList.remove("drag-over");
+
+        saveState();
+
+        setTimeout(() => {
+          if (
+            dragged?.zone &&
+            dragged.zone.elem.querySelectorAll(".item").length === 0
+            ) {
+            resetZone(dragged.zone);
+        }
+      }, 0);
+      });
+    });
+
+    function emptyIfEmpty(zone) {
+      if(!zone.elem.querySelectorAll(".item").length){
+        zone.elem.innerHTML = "";
+      }
+    }
+    
+
+
+
+
+    function showPrompt(title, initialValue, callback) {
+      const modal = document.getElementById("customPromptOverlay");
+      const inputTime = document.getElementById("promptInputTime");
+      const inputDescr = document.getElementById("promptInputDescr");
+      const titleEl = document.getElementById("promptTitle");
+      const selectClass = document.getElementById("classPalette");
+
+
+      titleEl.textContent = title;
+      inputTime.value = initialValue.time || "";
+      inputDescr.value = initialValue.descr || "";
+      modal.classList.remove("hidden");
+      inputDescr.focus();
+
+      selectClass.querySelectorAll(".modalBtn").forEach(button =>{
+        if(initialValue.classes.includes(button.textContent)){
+          button.classList.add("selected");
+        } else {
+          button.classList.remove("selected");
+        }
+      });
+
+      function handleKeyDown(e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          document.getElementById("promptConfirmBtn").click();
+          inputTime.removeEventListener("keydown", handleKeyDown);
+          inputDescr.removeEventListener("keydown", handleKeyDown);
+        }
+
+        if (e.key === "Escape") {
+          e.preventDefault();
+          cleanup();
+          callback(null);
+          inputTime.removeEventListener("keydown", handleKeyDown);
+          inputDescr.removeEventListener("keydown", handleKeyDown);
+        }
+      }
+
+      inputTime.addEventListener("keydown", handleKeyDown);
+      inputDescr.addEventListener("keydown", handleKeyDown);
+
+      function cleanup() {
+        modal.classList.add("hidden");
+        document.getElementById("promptConfirmBtn").onclick = null;
+        document.getElementById("promptCancelBtn").onclick = null;
+      }
+
+      document.getElementById("promptConfirmBtn").onclick = () => {
+        cleanup();
+        callback({time: inputTime.value.trim(), descr: inputDescr.value.trim(), classes: [...selectClass.querySelectorAll(".selected")].map(e => e.textContent)});
+      };
+
+      document.getElementById("promptCancelBtn").onclick = () => {
+        cleanup();
+        callback(null);
+      };
+
+      document.getElementById("customPromptOverlay").addEventListener("click", function (e) {
+        const modal = document.getElementById("customPrompt");
+        if (!modal.contains(e.target)) {
+          cleanup();
+          callback(null);
+        }
+      });
+
+      let activeInput = inputDescr; // champ actif
+
+      // Lorsqu’un input reçoit le focus, on le mémorise
+      inputTime.addEventListener("focus", () => {activeInput = inputTime});
+      inputDescr.addEventListener("focus", () => {activeInput = inputDescr});
+
+
+      document.querySelectorAll("#emojiPalette .emoji").forEach(el => {
+        el.onclick = () => {
+          if (!activeInput) return;
+
+          const emoji = el.innerHTML;
+          const start = activeInput.selectionStart;
+          const end = activeInput.selectionEnd;
+          const text = activeInput.value;
+
+          // Insère l’emoji à la position du curseur
+          activeInput.value = text.slice(0, start) + emoji + text.slice(end);
+
+          // Replace le curseur juste après l’emoji inséré
+          const newPos = start + emoji.length;
+          activeInput.setSelectionRange(newPos, newPos);
+
+          activeInput.focus();
+        };
+      });
+    }
+
+    document.addEventListener("dragend", () => {
+      dragged = null;
+      document.querySelectorAll(".dragging").forEach(el => el.classList.remove("dragging"));
+    });
+
+
+    
+
+    loadState();
+
+    const container = document.getElementById('page');
+    const resizer = document.getElementById('resizer');
+
+    let isDragging = false;
+    let startY = 0;
+    let startHeight = 0;
+
+    resizer.addEventListener('mousedown', function (e) {
+      isDragging = true;
+      startY = e.clientY;
+      startHeight = container.offsetHeight;
+      document.body.style.cursor = 'row-resize';
+    });
+
+    document.addEventListener('mousemove', function (e) {
+      if (!isDragging) return;
+      const dy = e.clientY - startY;
+      container.style.height = `${startHeight + dy}px`;
+    });
+
+    document.addEventListener('mouseup', function () {
+      isDragging = false;
+      document.body.style.cursor = 'default';
+    });
+</script>
+
+</body>
+</html>
